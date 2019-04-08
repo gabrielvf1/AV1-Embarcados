@@ -293,6 +293,8 @@ int main(void) {
 			 contador_roda_total = contador_roda_total + contador_roda;
 			calc_w = (2*3.14*contador_roda)/  4 ;
 			vel = (calc_w * 0.325)*3.6;
+			ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+			ili9488_draw_filled_rectangle(0, 30, 320,60);
 			sprintf(vel_string,"%f",vel);
 			font_draw_text(&calibri_36, vel_string, 10, 30, 1);
 			distancia = (2*3.14*0.325*(contador_roda_total));
