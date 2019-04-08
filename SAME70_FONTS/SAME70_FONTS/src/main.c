@@ -35,8 +35,15 @@ struct ili9488_opt_t g_ili9488_display_opt;
 /* variaveis globais                                                    */
 /************************************************************************/
 volatile Bool f_rtt_alarme = false;
-volatile int contador_roda;
+volatile int contador_roda = 0;
+char vel_string[32],distancia_string[32],tempo_string[32];
 volatile Bool flag_aumentou = false;
+int tempo = -1;
+float calc_w = 0;
+float vel = 0;
+int contador_roda_total = 0;
+float distancia = 0;
+int calculo_tempo = -1;
 
 /************************************************************************/
 /* prototypes                                                           */
@@ -72,7 +79,6 @@ void RTT_Handler(void)
 void but1_callBack(void){
 	pio_set(LED_PIO,LED_IDX_MASK);
 	contador_roda += 1;
-	flag_aumentou = true;
 }
 
 void pin_toggle(Pio *pio, uint32_t mask){
@@ -88,7 +94,7 @@ void io_init(void){
 	pio_configure(LED_PIO, PIO_OUTPUT_0, LED_IDX_MASK, PIO_DEFAULT);
 	
 	pmc_enable_periph_clk(BUT1_PIO_ID);
-	pio_configure(BUT1_PIO, PIO_INPUT, BUT1_IDX_MASK, PIO_PULLUP);
+	pio_configure(BUT1_PIO, PIO_INPUT, BUT1_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);
 	
 	pio_handler_set(BUT1_PIO,
 	BUT1_PIO_ID,
@@ -97,6 +103,7 @@ void io_init(void){
 	but1_callBack);
 	
 	pio_enable_interrupt(BUT1_PIO, BUT1_IDX_MASK);
+	
 	
 	NVIC_EnableIRQ(BUT1_PIO_ID);
 	NVIC_SetPriority(BUT1_PIO_ID, 4);
@@ -142,6 +149,12 @@ void configure_lcd(void){
 	
 }
 
+void write_text(int x, int y,  int tamanho_max_x, int tamanho_max_y , char *text){
+	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+	ili9488_draw_filled_rectangle(x-2, y-2, tamanho_max_x+2, tamanho_max_y+2);
+	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
+	ili9488_draw_string(x,y,text);
+}
 
 void font_draw_text(tFont *font, const char *text, int x, int y, int spacing) {
 	char *p = text;
@@ -166,11 +179,24 @@ int main(void) {
 	configure_lcd();
 	 f_rtt_alarme = true;
 	
-	font_draw_text(&sourcecodepro_28, "OIMUNDO", 50, 50, 1);
-	font_draw_text(&calibri_36, "Oi Mundo! #$!@", 50, 100, 1);
-	font_draw_text(&arial_72, "102456", 50, 200, 2);
+	
+	font_draw_text(&calibri_36, "Vel. Instantanea(2s):", 10, 0, 1);
+	font_draw_text(&calibri_36, "Distancia Total:", 10, 60, 1);
+	font_draw_text(&calibri_36, "Tempo Total(s):", 10, 120, 1);
 	while(1) {
 		 if (f_rtt_alarme){
+			 contador_roda_total = contador_roda_total + contador_roda;
+			calc_w = (2*3.14*contador_roda)/  2 ;
+			vel = calc_w * 0.325;
+			sprintf(vel_string,"%f",vel);
+			font_draw_text(&calibri_36, vel_string, 10, 30, 1);
+			distancia = (2*3.14*0.325*(contador_roda_total-1));
+			sprintf(distancia_string,"%f",distancia);
+			font_draw_text(&calibri_36, distancia_string, 10, 90, 1);
+			tempo+=1;
+			calculo_tempo = tempo*2;
+			sprintf(tempo_string,"%d",calculo_tempo);
+			font_draw_text(&calibri_36, tempo_string, 10, 150, 1);
       
       /*
        * O clock base do RTT é 32678Hz
@@ -205,6 +231,8 @@ int main(void) {
       /*
        * CLEAR FLAG
        */
+	  
+	  contador_roda = 0;
       f_rtt_alarme = false;
     }
   }  
